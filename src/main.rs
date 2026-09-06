@@ -1,29 +1,37 @@
 use std::f32::consts::PI;
 
-use bevy::{prelude::*, window::PrimaryWindow};
+use bevy::{color::palettes::css::PURPLE, prelude::*};
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_systems(Startup, setup)
-        .add_systems(Update, player_rotate)
+        .add_systems(Update, aim_rotate)
         .run();
 }
 
-fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn setup(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+) {
     commands.spawn(Camera2d);
     commands.spawn(PlayerBundle::new(asset_server.load("stone01.png")));
+    commands.spawn(AimBundle::new(
+        meshes.add(Rectangle::default()),
+        materials.add(Color::from(PURPLE)),
+    ));
 }
 
-fn player_rotate(
-    mut query: Single<&mut Transform, With<Player>>,
-    window: Single<&Window, With<PrimaryWindow>>,
-) {
-    let center = Vec2::new(window.width() / 2.0, window.height() / 2.0);
-    if let Some(position) = window.cursor_position() {
-        let mut pos = center - position;
-        pos.x = -pos.x;
-        query.rotation = Quat::from_euler(EulerRot::YXZ, 0.0, 0.0, pos.to_angle() - PI / 2.0)
+fn aim_rotate(time: Res<Time>, mut aims: Query<(&mut Transform, &mut Speed, &mut Aim)>) {
+    for (mut transform, mut speed, mut aim) in &mut aims {
+        let delta = speed.0 * time.delta_secs();
+        aim.0 += delta;
+        if aim.0 > PI || aim.0 < 0.0 {
+            speed.0 = -speed.0;
+        }
+        transform.rotate_z(delta);
     }
 }
 
@@ -43,6 +51,33 @@ impl PlayerBundle {
             player: Player,
             sprite: Sprite::from_image(asset),
             transform: Transform::IDENTITY,
+        };
+    }
+}
+
+#[derive(Component)]
+struct Aim(f32);
+
+#[derive(Component)]
+struct Speed(f32);
+
+#[derive(Bundle)]
+struct AimBundle {
+    aim: Aim,
+    speed: Speed,
+    mesh: Mesh2d,
+    material: MeshMaterial2d<ColorMaterial>,
+    transform: Transform,
+}
+
+impl AimBundle {
+    fn new(mesh: Handle<Mesh>, color: Handle<ColorMaterial>) -> Self {
+        return Self {
+            aim: Aim(0.0),
+            speed: Speed(PI),
+            mesh: Mesh2d(mesh),
+            material: MeshMaterial2d(color),
+            transform: Transform::default().with_scale(Vec3::splat(128.)),
         };
     }
 }
