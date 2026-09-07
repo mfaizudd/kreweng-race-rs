@@ -1,10 +1,13 @@
 use std::f32::consts::{PI, TAU};
 
 use bevy::prelude::*;
+use bevy_rapier2d::prelude::*;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
+        .add_plugins(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0))
+        .add_plugins(RapierDebugRenderPlugin::default())
         .add_systems(Startup, setup)
         .add_systems(Update, aim_rotate)
         .run();
@@ -13,14 +16,14 @@ fn main() {
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn(Camera2d);
     commands.spawn(PlayerBundle::new(asset_server.load("stone01.png")));
-    commands.spawn((
-        AimBundle::new(),
-        children![
+    commands.spawn(AimBundle::new()).with_children(|s| {
+        s.spawn(
             SpriteBundle::new(asset_server.load("placeholder.png"))
                 .with_scale(Vec3::new(1.0, 0.5, 1.0))
-                .with_pos(Vec3::new(32.0, 0.0, 0.0))
-        ],
-    ));
+                .with_pos(Vec3::new(32.0, 0.0, 0.0)),
+        )
+        .insert(Collider::cuboid(32.0, 32.0));
+    });
 }
 
 fn aim_rotate(time: Res<Time>, mut aims: Query<(&mut Transform, &mut Speed, &mut Aim)>) {
@@ -43,6 +46,7 @@ struct PlayerBundle {
     player: Player,
     sprite: Sprite,
     transform: Transform,
+    collider: Collider,
 }
 
 impl PlayerBundle {
@@ -51,6 +55,7 @@ impl PlayerBundle {
             player: Player,
             sprite: Sprite::from_image(image),
             transform: Transform::default(),
+            collider: Collider::ball(28.0),
         };
     }
 }
