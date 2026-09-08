@@ -16,14 +16,15 @@ fn main() {
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn(Camera2d);
     commands.spawn(PlayerBundle::new(asset_server.load("stone01.png")));
-    commands.spawn(AimBundle::new()).with_children(|s| {
-        s.spawn(
-            SpriteBundle::new(asset_server.load("placeholder.png"))
-                .with_scale(Vec3::new(1.0, 0.5, 1.0))
-                .with_pos(Vec3::new(32.0, 0.0, 0.0)),
-        )
-        .insert(Collider::cuboid(32.0, 32.0));
-    });
+    commands
+        .spawn(AimBundle::new())
+        .with_children(|s| {
+            s.spawn(
+                SpriteBundle::new(asset_server.load("aim.png"))
+                    .with_scale(Vec3::splat(0.125))
+                    .with_pos(Vec3::new(64.0, 0.0, 0.0)),
+            );
+        });
 }
 
 fn aim_rotate(time: Res<Time>, mut aims: Query<(&mut Transform, &mut Speed, &mut Aim)>) {
