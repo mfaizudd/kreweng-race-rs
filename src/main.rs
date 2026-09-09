@@ -10,20 +10,22 @@ fn main() {
         .add_plugins(RapierDebugRenderPlugin::default())
         .add_systems(Startup, setup)
         .add_systems(Update, aim_rotate)
+        .add_systems(Update, shoot)
         .run();
 }
 
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn(Camera2d);
-    commands.spawn(PlayerBundle::new(asset_server.load("stone01.png")));
     commands
-        .spawn(AimBundle::new())
-        .with_children(|s| {
-            s.spawn(
-                SpriteBundle::new(asset_server.load("aim.png"))
-                    .with_scale(Vec3::splat(0.125))
-                    .with_pos(Vec3::new(64.0, 0.0, 0.0)),
-            );
+        .spawn(PlayerBundle::new(asset_server.load("stone01.png")))
+        .with_children(|c| {
+            c.spawn(AimBundle::new()).with_children(|c| {
+                c.spawn(
+                    SpriteBundle::new(asset_server.load("aim.png"))
+                        .with_scale(Vec3::splat(0.125))
+                        .with_pos(Vec3::new(64.0, 0.0, 0.0)),
+                );
+            });
         });
 }
 
@@ -36,6 +38,28 @@ fn aim_rotate(time: Res<Time>, mut aims: Query<(&mut Transform, &mut Speed, &mut
             speed.0 = -speed.0;
         }
         transform.rotation = Quat::from_euler(EulerRot::YXZ, 0.0, 0.0, aim.0);
+    }
+}
+
+fn shoot(
+    keys: Res<ButtonInput<KeyCode>>,
+    players: Query<(Entity, &Children), With<Player>>,
+    mut player: Query<&mut Transform, (With<Player>, Without<Aim>)>,
+    aim: Query<&GlobalTransform, (With<Aim>, Without<Player>)>,
+) {
+    if keys.just_pressed(KeyCode::Space) {
+        for (parent, children) in players {
+            let Ok(mut player_transform) = player.get_mut(parent) else {
+                return;
+            };
+            for child in children {
+                if let Ok(transform) = aim.get(*child) {
+                    let (y, p, r) = transform.rotation().to_euler(EulerRot::YXZ);
+                    player_transform.translation += Vec3::new(r.cos(), r.sin(), 0.0) * 100.0;
+                    player_transform.rotation = Quat::from_euler(EulerRot::YXZ, y, p, r - PI / 2.0);
+                }
+            }
+        }
     }
 }
 
