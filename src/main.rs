@@ -11,6 +11,7 @@ fn main() {
         .add_systems(Startup, setup)
         .add_systems(Update, aim_rotate)
         .add_systems(Update, shoot)
+        .add_systems(Update, cam_follower)
         .run();
 }
 
@@ -61,6 +62,16 @@ fn shoot(
             }
         }
     }
+}
+
+fn cam_follower(
+    time: Res<Time>,
+    mut camera: Single<&mut Transform, (With<Camera2d>, Without<Player>)>,
+    player: Single<&Transform, With<Player>>,
+) {
+    let decay_rate = 5.0;
+    let t = 1.0 - (-decay_rate * time.delta_secs()).exp();
+    camera.translation = camera.translation.lerp(player.translation, t);
 }
 
 #[derive(Component)]
